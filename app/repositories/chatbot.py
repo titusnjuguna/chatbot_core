@@ -1,6 +1,9 @@
+import sqlalchemy
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from models.chatbot import Service ,DocumentRecord
+# from sqlalchemy.future import select,func,outerjoin
+from models.chatbot import Service ,DocumentRecord,CustomerInfo,Service,customerQuery
+from sqlalchemy.orm import aliased
+from sqlalchemy import select,func,outerjoin
 
 class ChatbotRepository:
     def __init__(self, db: AsyncSession):
@@ -14,8 +17,30 @@ class ChatbotRepository:
         return service
 
     async def get_services(self) -> list[Service]:
-        result = await self.db.execute(select(Service))
-        return result.scalars().all()
+        doc_alias = aliased(DocumentRecord)
+        query = (
+            select(
+            Service.id,
+            Service.name,
+            Service.description,
+            func.count(doc_alias.id).label('document_count'))
+        .outerjoin(doc_alias, Service.id == doc_alias.service_id)
+        .group_by(Service.id, Service.name, Service.description)
+        .order_by(Service.id))
+        result = await self.db.execute(query)
+        rows = result.all()
+        services_list = [
+            {
+                "id": row.id,
+                "name": row.name,
+                "description": row.description,
+                "document_count": row.document_count
+            }
+            for row in rows
+        ]
+        return services_list
+    
+   
     
     async def get_document_record(self,doc_id):
         result = await self.db.execute(select(DocumentRecord).where(DocumentRecord.document_id == doc_id,DocumentRecord.status == "active"))
@@ -43,3 +68,25 @@ class ChatbotRepository:
 
     
 
+    async def add_customer_info(self,request):
+        customer_info = CustomerInfo(
+            name = request.name,
+            email = request.email,
+            phone = request.phone,
+            additional_info = request.additional_info
+        )
+        query = customerQuery(
+            question = request.query,
+            service_id = request.service_id,
+            customer_info = customer_info
+        )
+        self.db.add(customer_info)
+        self.db.add(query)      
+        await self.db.commit()
+        await self.db.refresh(customer_info)
+        await self.db.refresh(query)
+        return customer_info
+    
+    async def get_all_customer_queries(self):
+        result = await self.db.execute(select(customerQuery))
+        return result.scalars().all()

@@ -31,6 +31,10 @@ class UserRepository:
         query = "SELECT * FROM users WHERE id = ?"
         self.cursor.execute(query, (user_id,))
         return self.cursor.fetchone()
+    
+    async def get_users(self):
+        result = await self.db.execute(select(User))
+        return result.scalars().all()
 
     def close(self):
         self.connection.close()

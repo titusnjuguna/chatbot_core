@@ -26,5 +26,10 @@ class ChatbotService:
     
     async def add_document_record(self,document:dict):
         return await self.chat_repo.create_document_record(document)
-
+    
+    async def add_customer_info(self,request):
+        return await self.chat_repo.add_customer_info(request)
+        
+    async def get_all_customer_queries(self):
+        return await self.chat_repo.get_all_customer_queries()
     

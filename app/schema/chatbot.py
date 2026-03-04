@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List,Optional
 from datetime import datetime
 
@@ -67,6 +67,27 @@ class ServiceRead(BaseModel):
     id: int
     name: str
     description: Optional[str]
+    document_count: int
 
     class Config:
         from_attributes = True  
+
+class CustomerInfoRequest(BaseModel):
+    name: str
+    email: str
+    phone: str
+    additional_info: Optional[str] = None
+    query: str
+    service_id: Optional[int] = None
+
+    #validate query to prevent empty string and malicious input, illegal characters, etc.
+    @validator('query')
+    def validate_query(cls, v):
+        if not v.strip():
+            raise ValueError('Query cannot be empty')
+        if len(v) > 1000:
+            raise ValueError('Query is too long')
+        # Add more validation rules as needed (e.g., regex for allowed characters)
+        if any(char in v for char in ['<', '>', '{', '}', '$', ';']):
+            raise ValueError('Query contains illegal characters')
+        return v

@@ -22,3 +22,6 @@ class UserService:
 
     def delete_user(self, user_id):
         return self.user_repository.delete(user_id)
+    
+    async def get_users(self):
+        return await self.user_repository.get_users()

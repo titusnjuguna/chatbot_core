@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Path,Depends,File,Form
 from sqlalchemy.ext.asyncio import AsyncSession 
-from schema.chatbot import UploadResponse,ServiceRead,QueryRequest, AnswerResponse,ServiceCreate,ServiceQueryRequest
+from schema.chatbot import UploadResponse,ServiceRead,QueryRequest, AnswerResponse,ServiceCreate,ServiceQueryRequest,CustomerInfoRequest
 from utils.security import sanitize_filename
 from config.config import settings
 from config.dependancies import get_rag_service
@@ -45,11 +45,8 @@ async def upload_pdf(
     if not service:
         raise HTTPException(404, f"Service {service_type} not found")
     
-    # Generate UUID for document
     document_id = str(uuid.uuid4())
-    print(document_id)
     
-    # Save file with UUID in name to avoid conflicts
     safe_filename = f"{document_id}_{file.filename}"
     file_path = settings.upload_dir / safe_filename
     
@@ -82,7 +79,6 @@ async def upload_pdf(
             "service": service,
             "result": resul
         }
-        
     except Exception as e:
         logger.error(f"Upload failed: {str(e)}")
         if file_path.exists():
@@ -202,8 +198,12 @@ async def query_document_stream(
 
 
 
-
-
+@router.post("/add-customer-info")
+async def add_customer_info(
+    request: CustomerInfoRequest,
+    chatbot_service: ChatbotService = Depends(get_chat_service)
+):
+    return await chatbot_service.add_customer_info(request)
 
     
 
